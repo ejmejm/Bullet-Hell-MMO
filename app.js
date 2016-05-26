@@ -15,29 +15,53 @@ console.log('Server Started');
 var SOCKET_LIST = {};
 var PLAYER_LIST = {};
 
-var Player = function(id){
+var Entity = function(id){
 	var self = {
 		x: 0,
 		y: 0,
-		speed: 3,
-		up: false,
-		down: false,
-		left: false,
-		right: false,
-		id: id
+		speed: {x: 0, y: 0},
+		id: ''
 	}
-	
-	self.updatePosition = function(){
-		if(self.up)
-			self.y -= self.speed;
-		if(self.down)
-			self.y += self.speed;
-		if(self.left)
-			self.x -= self.speed;
-		if(self.right)
-			self.x += self.speed;
+
+	self.update = function(){
+		self.updatePosition();
 	}
-	
+	self.updatePosition() = function(){
+		self.x += self.speed.x;
+		self.y += self.speed.y;
+	}
+
+	return self;
+}
+
+var Player = function(id){
+	var self = Entity();
+	self.id = id;
+	self.up = false;
+	self.down = false;
+	self.left = false;
+	self.right = false;
+	self.maxSpeed = 10;
+
+	self.updateSpeed = function(){
+		if(self.up && self.down)
+			self.speed.y = 0;
+		else if(self.up)
+			self.speed.y = -self.maxSpeed;
+		else if(self.down)
+			self.speed.y = self.maxSpeed;
+		else
+			self.speed.y = 0;
+		if(self.left && self.right)
+			self.speed.x = 0;
+		else if(self.left)
+			self.speed.x = -self.maxSpeed;
+		else if(self.right)
+			self.speed.x = self.maxSpeed;
+		else
+			self.speed.x = 0;
+	}
+
 	return self;
 }
 
@@ -45,15 +69,15 @@ var io = require('socket.io')(serv, {});
 io.sockets.on('connection', function(socket){
 	socket.id = Math.random();
 	SOCKET_LIST[socket.id] = socket;
-	
+
 	var player = Player(socket.id);
 	PLAYER_LIST[socket.id] = player;
-	
+
 	socket.on('disconnect', function(){
 		delete SOCKET_LIST[socket.id];
 		delete PLAYER_LIST[socket.id];
 	});
-	
+
 	socket.on('keyPress', function(data){
 		if(data.inputId === 'up')
 			player.up = data.state;
@@ -76,7 +100,7 @@ setInterval(function(){
 			y: player.y
 		});
 	}
-	
+
 	for(var i in SOCKET_LIST){
 		var socket = SOCKET_LIST[i];
 		socket.emit('positionUpdate', pack);
