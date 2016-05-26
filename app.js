@@ -14,10 +14,13 @@ console.log('Server Started');
 
 var SOCKET_LIST = {};
 
+//Entity stuff
+
 var Entity = function(id){
 	var self = {
 		x: 0,
 		y: 0,
+		maxSpeed: 1,
 		speed: {x: 0, y: 0},
 		id: ''
 	}
@@ -31,14 +34,54 @@ var Entity = function(id){
 	return self;
 }
 
-var Player = function(id){
+//Bullet stuff
+
+var Bullet = function(direction, position){
 	var self = Entity();
+	self.maxSpeed = 10;
+	self.id = Math.random();
+	self.x = position.x;
+	self.y = position.y;
+	self.speed.x = direction.x * self.maxSpeed;
+	self.speed.y = direction.y * self.maxSpeed;
+
+	self.timer = 0;
+	self.remove = false;
+	var superUpdate = self.update;
+	self.update = function(){
+		if(self.timer++ > 100)
+			self.remove = true;
+		superUpdate();
+	}
+	Bullet.list[self.id] = self;
+	return self;
+}
+
+Bullet.list = {};
+
+Bullet.update = function(){
+	var pack = [];
+	for(var i in Bullet.list){
+		var bullet = Bullet.list[i];
+		bullet.update();
+		pack.push({
+			x: bullet.x,
+			y: bullet.y
+		});
+	}
+	return pack;
+}
+
+//Player stuff
+
+var Player = function(id){
+	var self = Entity();;
+	self.maxSpeed = 5;
 	self.id = id;
 	self.up = false;
 	self.down = false;
 	self.left = false;
-	self.right = false;
-	self.maxSpeed = 5;
+	self.right = false
 
 	var superUpdate = self.update;
 	self.update = function(){
@@ -85,6 +128,16 @@ Player.onConnect = function(socket){
 		else if(data.inputId === 'right')
 			player.right = data.state;
 	});
+
+	socket.on('click', function(data){
+		var direction = {x: 0, y: 0};
+		direction.x = data.mousePos.x - player.x;
+		direction.y = data.mousePos.y - player.y;
+		var mag = Math.sqrt(Math.pow(direction.x, 2) + Math.pow(direction.y, 2));
+		direction.x /= mag;
+		direction.y /= mag;
+		Bullet(direction, {x: player.x, y: player.y});
+	});
 }
 
 Player.onDisconnect = function(socket){
@@ -106,6 +159,7 @@ Player.update = function(){
 	}
 	return pack;
 }
+
 var io = require('socket.io')(serv, {});
 io.sockets.on('connection', function(socket){
 	socket.id = Math.random();
@@ -116,7 +170,10 @@ io.sockets.on('connection', function(socket){
 });
 
 setInterval(function(){
-	var pack = Player.update();
+	var pack = {
+		player: Player.update(),
+		bullet: Bullet.update()
+	}
 
 	for(var i in SOCKET_LIST){
 		var socket = SOCKET_LIST[i];
