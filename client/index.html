@@ -10,6 +10,7 @@
 	socket.on('positionUpdate', function(data){
 		ctx.clearRect(0, 0, 500, 500);
 		for(var i = 0; i < data.length; i++){
+			ctx.fillStyle = 'blue';
 			ctx.fillRect(data[i].x, data[i].y, 30, 30);
 		}
 	});
