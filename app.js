@@ -7,7 +7,7 @@ app.get('/', function(req, res){
 });
 app.use('/client', express.static(__dirname + '/client'));
 
-var port = Number(process.env.PORT || 2000);
+var port = Number(process.env.PORT || 3000);
 
 serv.listen(port);
 console.log('Server Started');
