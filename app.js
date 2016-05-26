@@ -13,7 +13,6 @@ serv.listen(port);
 console.log('Server Started');
 
 var SOCKET_LIST = {};
-var PLAYER_LIST = {};
 
 var Entity = function(id){
 	var self = {
@@ -22,15 +21,13 @@ var Entity = function(id){
 		speed: {x: 0, y: 0},
 		id: ''
 	}
-
 	self.update = function(){
 		self.updatePosition();
 	}
-	self.updatePosition() = function(){
+	self.updatePosition = function(){
 		self.x += self.speed.x;
 		self.y += self.speed.y;
 	}
-
 	return self;
 }
 
@@ -41,7 +38,13 @@ var Player = function(id){
 	self.down = false;
 	self.left = false;
 	self.right = false;
-	self.maxSpeed = 10;
+	self.maxSpeed = 5;
+
+	var superUpdate = self.update;
+	self.update = function(){
+		self.updateSpeed();
+		superUpdate();
+	}
 
 	self.updateSpeed = function(){
 		if(self.up && self.down)
@@ -62,21 +65,15 @@ var Player = function(id){
 			self.speed.x = 0;
 	}
 
+	Player.list[id] = self;
+
 	return self;
 }
 
-var io = require('socket.io')(serv, {});
-io.sockets.on('connection', function(socket){
-	socket.id = Math.random();
-	SOCKET_LIST[socket.id] = socket;
+Player.list = {};
 
+Player.onConnect = function(socket){
 	var player = Player(socket.id);
-	PLAYER_LIST[socket.id] = player;
-
-	socket.on('disconnect', function(){
-		delete SOCKET_LIST[socket.id];
-		delete PLAYER_LIST[socket.id];
-	});
 
 	socket.on('keyPress', function(data){
 		if(data.inputId === 'up')
@@ -88,18 +85,38 @@ io.sockets.on('connection', function(socket){
 		else if(data.inputId === 'right')
 			player.right = data.state;
 	});
-});
+}
 
-setInterval(function(){
+Player.onDisconnect = function(socket){
+		socket.on('disconnect', function(){
+			delete SOCKET_LIST[socket.id];
+			delete Player.list[socket.id];
+		});
+}
+
+Player.update = function(){
 	var pack = [];
-	for(var i in PLAYER_LIST){
-		var player = PLAYER_LIST[i];
-		player.updatePosition();
+	for(var i in Player.list){
+		var player = Player.list[i];
+		player.update();
 		pack.push({
 			x: player.x,
 			y: player.y
 		});
 	}
+	return pack;
+}
+var io = require('socket.io')(serv, {});
+io.sockets.on('connection', function(socket){
+	socket.id = Math.random();
+	SOCKET_LIST[socket.id] = socket;
+
+	Player.onConnect(socket);
+	Player.onDisconnect(socket);
+});
+
+setInterval(function(){
+	var pack = Player.update();
 
 	for(var i in SOCKET_LIST){
 		var socket = SOCKET_LIST[i];
