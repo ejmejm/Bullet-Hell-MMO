@@ -36,12 +36,20 @@ var Entity = function(id){
 
 //Bullet stuff
 
-var Bullet = function(direction, position){
+var Bullet = function(targetPosition, position){
 	var self = Entity();
 	self.maxSpeed = 10;
 	self.id = Math.random();
 	self.x = position.x;
 	self.y = position.y;
+
+	var direction = {};
+	direction.x = targetPosition.x - position.x;
+	direction.y = targetPosition.y - position.y;
+	var mag = Math.sqrt(Math.pow(direction.x, 2) + Math.pow(direction.y, 2));
+	direction.x /= mag;
+	direction.y /= mag;
+
 	self.speed.x = direction.x * self.maxSpeed;
 	self.speed.y = direction.y * self.maxSpeed;
 
@@ -64,10 +72,15 @@ Bullet.update = function(){
 	for(var i in Bullet.list){
 		var bullet = Bullet.list[i];
 		bullet.update();
-		pack.push({
-			x: bullet.x,
-			y: bullet.y
-		});
+		if(bullet.remove){
+			delete Bullet.list[i]
+		}
+		else{
+			pack.push({
+				x: bullet.x,
+				y: bullet.y
+			});
+		}
 	}
 	return pack;
 }
@@ -75,17 +88,23 @@ Bullet.update = function(){
 //Player stuff
 
 var Player = function(id){
-	var self = Entity();;
+	var self = Entity();
 	self.maxSpeed = 5;
 	self.id = id;
 	self.up = false;
 	self.down = false;
 	self.left = false;
-	self.right = false
+	self.right = false;
+	self.shoot = false;
+	self.mousePos = {x: 0, y: 0};
 
 	var superUpdate = self.update;
 	self.update = function(){
 		self.updateSpeed();
+
+		if(self.shoot)
+			Bullet({x: self.mousePos.x, y: self.mousePos.y}, {x: self.x+15, y: self.y+15});
+
 		superUpdate();
 	}
 
@@ -129,14 +148,14 @@ Player.onConnect = function(socket){
 			player.right = data.state;
 	});
 
-	socket.on('click', function(data){
-		var direction = {x: 0, y: 0};
-		direction.x = data.mousePos.x - player.x;
-		direction.y = data.mousePos.y - player.y;
-		var mag = Math.sqrt(Math.pow(direction.x, 2) + Math.pow(direction.y, 2));
-		direction.x /= mag;
-		direction.y /= mag;
-		Bullet(direction, {x: player.x, y: player.y});
+	socket.on('mousePress', function(data){
+		if(data.inputId === 'click'){
+			player.shoot = data.state;
+		}
+		else if(data.inputId === 'move'){
+			player.mousePos.x = data.x;
+			player.mousePos.y = data.y;
+		}
 	});
 }
 

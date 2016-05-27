@@ -1,6 +1,7 @@
-<canvas onclick="ctxClick(event)" id="ctx" width="500" height="500" style="border:1px solid #000000;"></canvas>
+<canvas id="ctx" width="500" height="500" style="border:1px solid #000000;"></canvas>
 
-<script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+<script src="http://cdn.socket.io/socket.io-1.4.5.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
 <script>
 	var ctx = document.getElementById('ctx').getContext('2d');
 	ctx.font = '30px Arial';
@@ -40,11 +41,27 @@
 			socket.emit('keyPress', {inputId: 'right', state: false});
 	}
 
+	document.onmousedown = function(event){
+	  socket.emit('mousePress', {inputId: 'click', state: true})
+	}
+	document.onmouseup = function(event){
+	  socket.emit('mousePress', {inputId: 'click', state: false})
+	}
+	document.onmousemove = function(event){
+		socket.emit('mousePress', {
+			inputId: 'move',
+	  	x: (event.clientX - $("canvas").offset().left),
+	  	y: (event.clientY - $("canvas").offset().top)
+		});
+	}
+
+	/*
 	function ctxClick(event){
 		socket.emit('click',{
 			mousePos: {x: event.clientX, y: event.clientY}
 		});
 	}
+	*/
 	/*
 	socket.emit('happy',{
 		reason: 'Test'
