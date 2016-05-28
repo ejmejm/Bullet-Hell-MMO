@@ -8,17 +8,86 @@
 
 	var socket = io();
 
-	socket.on('positionUpdate', function(data){
-		ctx.clearRect(0, 0, 500, 500);
-		for(var i = 0; i < data.player.length; i++){
-			ctx.fillStyle = 'blue';
-			ctx.fillRect(data.player[i].x, data.player[i].y, 30, 30);
-		}
+	//Client side objects
+
+	//Client side player
+	var Player = function(initPack){
+		var self = {};
+		self.id = initPack.id;
+		self.x = initPack.x;
+		self.y = initPack.y;
+		Player.list[self.id] = self;
+		return self;
+	}
+
+	Player.list = {};
+
+	//Client side bullet
+	var Bullet = function(initPack){
+		var self = {};
+		self.id = initPack.id;
+		self.x = initPack.x;
+		self.y = initPack.y;
+		Bullet.list[self.id] = self;
+		return self;
+	}
+
+	Bullet.list = {};
+
+	//Sending and recieving data to and from the server
+
+	socket.on('init', function(data){
+		for(var i = 0; i < data.player.length; i++)
+			new Player(data.player[i]);
+		for(var i = 0; i < data.bullet.length; i++)
+			new Bullet(data.bullet[i]);
+	});
+
+	socket.on('update', function(data){
+			for(var i = 0; i < data.player.length; i++){
+				var pack = data.player[i];
+				var p = Player.list[pack.id];
+				if(p){
+					if(pack.x !== undefined)
+						p.x = pack.x;
+					if(pack.y !== undefined)
+						p.y = pack.y;
+				}
+			}
+			for(var i = 0; i < data.bullet.length; i++){
+				var pack = data.bullet[i];
+				var b = Bullet.list[pack.id];
+				if(b){
+					if(pack.x !== undefined)
+						b.x = pack.x;
+					if(pack.y !== undefined)
+						b.y = pack.y;
+				}
+			}
+	});
+
+	socket.on('remove', function(data){
+		for(var i = 0; i < data.player.length; i++)
+			delete Player.list[data.player[i]];
 		for(var i = 0; i < data.bullet.length; i++){
-			ctx.fillStyle = 'blue';
-			ctx.fillRect(data.bullet[i].x, data.bullet[i].y, 10, 10);
+			delete Bullet.list[data.bullet[i]];
 		}
 	});
+
+	//Draw loop
+	setInterval(function(){
+		ctx.clearRect(0, 0, 500, 500);
+		for(var i in Player.list){
+			ctx.fillStyle = 'black';
+			ctx.fillRect(Player.list[i].x, Player.list[i].y, 30, 30);
+		}
+		for(var i in Bullet.list){
+			ctx.fillStyle = 'blue';
+			ctx.fillRect(Bullet.list[i].x, Bullet.list[i].y, 10, 10);
+		}
+	}, 40);
+
+	//Player input
 
 	document.onkeydown = function(event){
 		if(event.keyCode === 87) //w
@@ -54,17 +123,4 @@
 	  	y: (event.clientY - $("canvas").offset().top)
 		});
 	}
-
-	/*
-	function ctxClick(event){
-		socket.emit('click',{
-			mousePos: {x: event.clientX, y: event.clientY}
-		});
-	}
-	*/
-	/*
-	socket.emit('happy',{
-		reason: 'Test'
-	});
-	*/
 </script>
