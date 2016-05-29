@@ -57,7 +57,7 @@ var Bullet = function(targetPosition, position){
 	self.remove = false;
 	var superUpdate = self.update;
 	self.update = function(){
-		if(self.timer++ > 100)
+		if(self.timer++ > 200)
 			self.remove = true;
 		superUpdate();
 	}
